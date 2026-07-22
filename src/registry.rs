@@ -7,7 +7,10 @@ use crate::{
 use std::collections::BTreeMap;
 
 #[cfg(windows)]
-use winreg::{enums::HKEY_CURRENT_USER, RegKey};
+use winreg::{
+    enums::{HKEY_CURRENT_USER, KEY_READ, KEY_WRITE},
+    RegKey,
+};
 
 pub fn read_color(slot: SystemColorSlot) -> Result<Color> {
     #[cfg(windows)]
@@ -107,5 +110,16 @@ impl RegistryBytesExt for winreg::RegValue {
 #[cfg(windows)]
 fn open_colors_key() -> Result<RegKey> {
     let root = RegKey::predef(HKEY_CURRENT_USER);
-    Ok(root.open_subkey(REGISTRY_COLORS_PATH)?)
+    Ok(root.open_subkey_with_flags(REGISTRY_COLORS_PATH, KEY_READ | KEY_WRITE)?)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::open_colors_key;
+
+    #[test]
+    #[cfg(windows)]
+    fn opens_colors_key_with_write_access() {
+        let _ = open_colors_key().expect("colors registry key should open");
+    }
 }

@@ -43,6 +43,12 @@ impl SystemColorManager {
         self.apply()
     }
 
+    pub fn set_all(&self, color: Color) -> Result<()> {
+        registry::write_color(SystemColorSlot::Highlight, color)?;
+        registry::write_color(SystemColorSlot::HotTracking, color)?;
+        self.apply()
+    }
+
     pub fn dump_registry(&self) -> Result<SystemColors> {
         registry::read_all()
     }
