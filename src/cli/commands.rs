@@ -1,4 +1,5 @@
 use std::path::PathBuf;
+use std::{collections::BTreeMap, fs};
 
 use clap::{Parser, Subcommand, ValueEnum};
 
@@ -6,8 +7,11 @@ use crate::{
     color::Color,
     constants::SystemColorSlot,
     errors::{Error, Result},
+    registry,
     system_colors::{SystemColorManager, SystemColors},
 };
+
+use serde::{Deserialize, Serialize};
 
 #[derive(Parser, Debug)]
 #[command(name = "syscolor", version, about = "Refresh and manage Windows system colors")]
@@ -89,16 +93,20 @@ pub fn run(cli: Cli) -> Result<()> {
             print_colors("registry", colors);
         }
         Commands::Backup { path } => {
-            tracing::warn!(?path, "backup is scaffolded but not implemented yet");
-            return Err(Error::UnsupportedPlatform(
-                "backup/restore will be added in the next iteration",
-            ));
+            tracing::info!(?path, "backing up registry colors");
+            let backup = RegistryColorsBackup::from_registry(registry::read_all_entries()?);
+            let json = serde_json::to_string_pretty(&backup).map_err(|error| Error::Win32(error.to_string()))?;
+            fs::write(&path, json).map_err(|error| Error::Io(error))?;
+            tracing::info!(?path, "backup completed");
         }
         Commands::Restore { path } => {
-            tracing::warn!(?path, "restore is scaffolded but not implemented yet");
-            return Err(Error::UnsupportedPlatform(
-                "backup/restore will be added in the next iteration",
-            ));
+            tracing::info!(?path, "restoring registry colors");
+            let json = fs::read_to_string(&path).map_err(|error| Error::Io(error))?;
+            let backup: RegistryColorsBackup = serde_json::from_str(&json)
+                .map_err(|error| Error::Win32(error.to_string()))?;
+            registry::write_all_entries(&backup.into_registry_entries())?;
+            manager.apply()?;
+            tracing::info!(?path, "restore completed");
         }
     }
 
@@ -127,4 +135,50 @@ fn print_colors(label: &str, colors: SystemColors) {
     println!("{}:", label);
     println!("  highlight = {}", colors.highlight);
     println!("  hot-tracking = {}", colors.hot_tracking);
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct RegistryColorsBackup {
+    colors: BTreeMap<String, SerializableColor>,
+}
+
+impl RegistryColorsBackup {
+    fn from_registry(entries: BTreeMap<String, Color>) -> Self {
+        Self {
+            colors: entries
+                .into_iter()
+                .map(|(name, color)| (name, SerializableColor::from(color)))
+                .collect(),
+        }
+    }
+
+    fn into_registry_entries(self) -> BTreeMap<String, Color> {
+        self.colors
+            .into_iter()
+            .map(|(name, color)| (name, color.into()))
+            .collect()
+    }
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+struct SerializableColor {
+    r: u8,
+    g: u8,
+    b: u8,
+}
+
+impl From<Color> for SerializableColor {
+    fn from(color: Color) -> Self {
+        Self {
+            r: color.r,
+            g: color.g,
+            b: color.b,
+        }
+    }
+}
+
+impl From<SerializableColor> for Color {
+    fn from(color: SerializableColor) -> Self {
+        Color::new(color.r, color.g, color.b)
+    }
 }

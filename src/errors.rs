@@ -5,6 +5,7 @@ pub enum Error {
     #[error("invalid color value: {0}")]
     InvalidColorValue(String),
 
+    #[allow(dead_code)]
     #[error("unsupported platform: {0}")]
     UnsupportedPlatform(&'static str),
 
