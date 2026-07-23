@@ -1,0 +1,67 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build-msi:
+    name: Build MSI Installer
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Install cargo-wix
+        run: cargo install cargo-wix --locked
+
+      - name: Install WiX Toolset v3.14
+        run: |
+          Invoke-WebRequest -Uri "https://github.com/wixtoolset/wix3/releases/download/wix3141rtm/wix314.exe" -OutFile wix314.exe
+          Start-Process .\wix314.exe -ArgumentList "/quiet" -Wait
+          Remove-Item .\wix314.exe
+          echo "C:\Program Files (x86)\WiX Toolset v3.14\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+      - name: Build release binary
+        run: cargo build --release
+
+      - name: Build MSI
+        run: cargo wix --nocapture
+
+      - name: Get version
+        id: version
+        run: |
+          $ver = (Select-String -Path Cargo.toml -Pattern 'version\s*=\s*"([^"]+)"').Matches[0].Groups[1].Value
+          echo "version=$ver" >> $env:GITHUB_OUTPUT
+
+      - name: Upload MSI artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: syscolor-${{ steps.version.outputs.version }}-x86_64
+          path: target/wix/*.msi
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: target/wix/*.msi
+          generate_release_notes: true
+          body_path: CHANGELOG.md

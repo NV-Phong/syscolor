@@ -1,7 +1,14 @@
 [package]
-name = "system-color-refresh"
+name = "syscolor"
 version = "0.1.0"
 edition = "2024"
+description = "Native Windows utility for refreshing system accent colors after sleep and resume"
+license = "MIT"
+authors = ["NV-Phong"]
+homepage = "https://github.com/NV-Phong/syscolor"
+repository = "https://github.com/NV-Phong/syscolor"
+keywords = ["windows", "system-colors", "accent", "registry", "utility"]
+categories = ["command-line-utilities", "os::windows-apis"]
 
 [[bin]]
 name = "syscolor"

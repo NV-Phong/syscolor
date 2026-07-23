@@ -313,7 +313,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "system-color-refresh"
+name = "syscolor"
 version = "0.1.0"
 dependencies = [
  "anyhow",
