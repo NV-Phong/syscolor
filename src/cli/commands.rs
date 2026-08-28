@@ -16,6 +16,9 @@ use serde::{Deserialize, Serialize};
 #[derive(Parser, Debug)]
 #[command(name = "syscolor", version, about = "Refresh and manage Windows system colors")]
 pub struct Cli {
+    #[arg(short, long, help = "Launch interactive select menu")]
+    pub interactive: bool,
+
     #[command(subcommand)]
     pub command: Option<Commands>,
 }
@@ -38,6 +41,8 @@ pub enum Commands {
     Restore {
         path: PathBuf,
     },
+    #[command(alias = "interactive", alias = "tui", alias = "select", alias = "ui")]
+    Menu,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, ValueEnum)]
@@ -59,9 +64,16 @@ impl ColorTarget {
 
 pub fn run(cli: Cli) -> Result<()> {
     let manager = SystemColorManager;
-    let command = cli.command.unwrap_or(Commands::Apply);
+    let command = if cli.interactive {
+        Commands::Menu
+    } else {
+        cli.command.unwrap_or(Commands::Menu)
+    };
 
     match command {
+        Commands::Menu => {
+            crate::cli::menu::run_interactive_menu()?;
+        }
         Commands::Apply => {
             tracing::info!("applying registry colors");
             manager.apply()?;

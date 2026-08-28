@@ -34,6 +34,45 @@ impl Color {
         Ok(Self::new(red, green, blue))
     }
 
+    pub fn to_hex(self) -> String {
+        format!("#{:02X}{:02X}{:02X}", self.r, self.g, self.b)
+    }
+
+    pub fn from_hex(hex: &str) -> Result<Self> {
+        let cleaned = hex.trim().trim_start_matches('#');
+        if cleaned.len() == 6 {
+            let r = u8::from_str_radix(&cleaned[0..2], 16)
+                .map_err(|_| Error::InvalidColorValue(hex.to_owned()))?;
+            let g = u8::from_str_radix(&cleaned[2..4], 16)
+                .map_err(|_| Error::InvalidColorValue(hex.to_owned()))?;
+            let b = u8::from_str_radix(&cleaned[4..6], 16)
+                .map_err(|_| Error::InvalidColorValue(hex.to_owned()))?;
+            Ok(Self::new(r, g, b))
+        } else if cleaned.len() == 3 {
+            let r_str = format!("{}{}", &cleaned[0..1], &cleaned[0..1]);
+            let g_str = format!("{}{}", &cleaned[1..2], &cleaned[1..2]);
+            let b_str = format!("{}{}", &cleaned[2..3], &cleaned[2..3]);
+            let r = u8::from_str_radix(&r_str, 16)
+                .map_err(|_| Error::InvalidColorValue(hex.to_owned()))?;
+            let g = u8::from_str_radix(&g_str, 16)
+                .map_err(|_| Error::InvalidColorValue(hex.to_owned()))?;
+            let b = u8::from_str_radix(&b_str, 16)
+                .map_err(|_| Error::InvalidColorValue(hex.to_owned()))?;
+            Ok(Self::new(r, g, b))
+        } else {
+            Err(Error::InvalidColorValue(hex.to_owned()))
+        }
+    }
+
+    pub fn ansi_fg(self) -> String {
+        format!("\x1b[38;2;{};{};{}m", self.r, self.g, self.b)
+    }
+
+    #[allow(dead_code)]
+    pub fn ansi_bg(self) -> String {
+        format!("\x1b[48;2;{};{};{}m", self.r, self.g, self.b)
+    }
+
     #[cfg(windows)]
     pub const fn to_colorref(self) -> COLORREF {
         COLORREF((self.r as u32) | ((self.g as u32) << 8) | ((self.b as u32) << 16))
@@ -89,6 +128,16 @@ mod tests {
         let color = Color::new(1, 2, 3);
 
         assert_eq!(color.to_string(), "1 2 3");
+    }
+
+    #[test]
+    fn parses_and_formats_hex() {
+        let color = Color::from_hex("#FF9999").expect("valid hex");
+        assert_eq!(color, Color::new(255, 153, 153));
+        assert_eq!(color.to_hex(), "#FF9999");
+
+        let short_color = Color::from_hex("f99").expect("valid short hex");
+        assert_eq!(short_color, Color::new(255, 153, 153));
     }
 
     #[cfg(windows)]

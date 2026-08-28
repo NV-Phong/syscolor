@@ -14,7 +14,14 @@ The installer places `syscolor.exe` in `Program Files\syscolor\bin\` and optiona
 ## Usage
 
 ```powershell
-# Re-apply registry accent colors to the live session (default action)
+# Launch interactive TUI select menu (default action)
+syscolor
+
+# Or explicitly
+syscolor menu
+syscolor -i
+
+# Re-apply registry accent colors to the live session
 syscolor apply
 
 # Get the current live color value
@@ -64,6 +71,7 @@ cargo install cargo-wix
 |------|---------------|
 | `src/main.rs` | Entry point, tracing init |
 | `src/cli/commands.rs` | CLI parsing and command dispatch |
+| `src/cli/menu.rs` | Interactive Fastfetch-style TUI select menu |
 | `src/color.rs` | RGB ↔ COLORREF conversion |
 | `src/constants.rs` | `SystemColorSlot` definitions |
 | `src/registry.rs` | Registry read/write |
