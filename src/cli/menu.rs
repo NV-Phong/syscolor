@@ -27,7 +27,6 @@ const COLOR_PRESETS: (u8, u8, u8) = (139, 212, 156);   // #8BD49C (Mint / Pastel
 const COLOR_ACTIONS: (u8, u8, u8) = (231, 199, 135);   // #E7C787 (Amber / Gold)
 const COLOR_STATUS: (u8, u8, u8) = (125, 166, 216);    // #7DA6D8 (Soft Blue)
 const COLOR_CONTROLS: (u8, u8, u8) = (215, 160, 201);  // #D7A0C9 (Lavender / Pink)
-const COLOR_SELECTED_BG: (u8, u8, u8) = (45, 55, 72);  // Selection highlight background
 
 const CARD_WIDTH: usize = 68;
 
@@ -551,17 +550,19 @@ fn render_main_screen(
 
     // ── SECTION 4: CONTROLS & SHORTCUTS ──────────────────────────────────────
     lines.push(render_box_header("CONTROLS & SHORTCUTS", COLOR_CONTROLS, CARD_WIDTH));
+    // Simplified navigation help: remove duplicate/alternate keys
     lines.push(render_box_item(
         true,
         false,
         "NAV",
-        "[↑/↓/j/k] Navigate  •  [Enter/Space] Select  •  [Tab/t] Toggle Target",
+        "[↑/↓] Navigate  •  [Enter/Space] Select",
         COLOR_CONTROLS,
         CARD_WIDTH,
         false,
     ));
+    // Remove duplicated exit hint (Exit already explained in Actions)
     let keys_hint = format!(
-        "[1-{}] Presets • [C] Custom • [A] Apply • [R] Reload • [Q/Esc] Exit",
+        "[1-{}] Presets • [C] Custom • [A] Apply • [R] Reload",
         presets.len()
     );
     lines.push(render_box_item(
@@ -662,7 +663,6 @@ fn render_box_item(
     width: usize,
     is_selected: bool,
 ) -> String {
-    let border_color = format!("\x1b[38;2;{};{};{}m", COLOR_BORDER.0, COLOR_BORDER.1, COLOR_BORDER.2);
     let accent_color = format!("\x1b[38;2;{};{};{}m", accent.0, accent.1, accent.2);
     let reset = "\x1b[0m";
 
@@ -676,13 +676,16 @@ fn render_box_item(
 
     let visible_content_len = strip_ansi_len(content);
     let cursor_prefix = if is_selected {
-        format!("\x1b[1;38;2;255;255;255m❯ \x1b[0m")
+        "❯ ".to_string()
     } else {
         "  ".to_string()
     };
 
-    let inner_width = if width > 6 { width - 6 } else { 20 };
-    let content_len_with_cursor = visible_content_len + 2;
+    // Increase inner width by 1 to add an extra space before the right border
+    let inner_width = if width > 5 { width - 5 } else { 20 };
+    // selected row uses a 3-char accent block: leading space + '❯' + trailing space
+    let cursor_visible_len = if is_selected { 3 } else { 2 };
+    let content_len_with_cursor = visible_content_len + cursor_visible_len;
     let padding_len = if inner_width >= content_len_with_cursor {
         inner_width - content_len_with_cursor
     } else {
@@ -692,28 +695,30 @@ fn render_box_item(
     let padding = " ".repeat(padding_len);
 
     if is_selected {
-        let sel_bg = format!("\x1b[48;2;{};{};{}m", COLOR_SELECTED_BG.0, COLOR_SELECTED_BG.1, COLOR_SELECTED_BG.2);
+        // Only the arrow gets the accent background and white foreground;
+        // the rest of the row stays transparent so the terminal background shows through.
+        let arrow_bg = format!("\x1b[48;2;{};{};{}m", accent.0, accent.1, accent.2);
+        let arrow_fg = "\x1b[1;38;2;255;255;255m";
         format!(
-            " {accent_color}{prefix}{reset}{sel_bg} {cursor_prefix}{content}{padding} {reset}{border_color}│{reset}",
+            " {accent_color}{prefix}{reset}{arrow_bg}{arrow_fg} {cursor}{reset}{content}{padding}  {accent_color}│{reset}",
             accent_color = accent_color,
             prefix = prefix_char,
             reset = reset,
-            sel_bg = sel_bg,
-            cursor_prefix = cursor_prefix,
+            arrow_bg = arrow_bg,
+            arrow_fg = arrow_fg,
+            cursor = cursor_prefix,
             content = content,
-            padding = padding,
-            border_color = border_color
+            padding = padding
         )
     } else {
         format!(
-            " {accent_color}{prefix}{reset} {cursor_prefix}{content}{padding} {border_color}│{reset}",
+            " {accent_color}{prefix}{reset} {cursor_prefix}{content}{padding} {accent_color}│{reset}",
             accent_color = accent_color,
             prefix = prefix_char,
             reset = reset,
             cursor_prefix = cursor_prefix,
             content = content,
-            padding = padding,
-            border_color = border_color
+            padding = padding
         )
     }
 }

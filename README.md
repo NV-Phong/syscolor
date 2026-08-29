@@ -7,7 +7,7 @@
 
 ## Installation
 
-Download `syscolor-0.1.0-x86_64.msi` from the [latest release](https://github.com/NV-Phong/syscolor/releases/latest) and run the installer.
+Download `syscolor-0.1.1-x86_64.msi` from the [latest release](https://github.com/NV-Phong/syscolor/releases/latest) and run the installer.
 
 The installer places `syscolor.exe` in `Program Files\syscolor\bin\` and optionally adds it to the system `PATH`.
 
@@ -80,6 +80,21 @@ cargo install cargo-wix
 | `src/broadcast.rs` | WM_SYSCOLORCHANGE / WM_SETTINGCHANGE broadcast |
 
 > Unsafe code is isolated entirely in `src/win32.rs`.
+
+## Interactive TUI updates
+
+- Right-border accent: the menu right border (`│`) now uses the section accent color so each section's border matches its accent.
+- Arrow selection highlight: only the selection arrow (`❯`) uses an accent background with a centered arrow block; the rest of the row remains transparent to preserve terminal background.
+- Selected-row spacing: an extra space is added before the right border on the selected row to keep the border visually aligned.
+- Controls & Shortcuts: duplicate/alternate key hints were simplified to reduce clutter.
+- Tests & build: local `cargo build` and `cargo test` completed successfully (unit tests passed).
+
+To visually verify the changes run:
+
+```powershell
+cargo run --manifest-path Cargo.toml
+```
+
 
 ## License
 

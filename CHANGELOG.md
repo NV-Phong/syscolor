@@ -19,3 +19,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Windows MSI installer** (`syscolor-0.1.0-x86_64.msi`) — installs `syscolor.exe` to `Program Files` and optionally adds it to the system `PATH`.
 
 [0.1.0]: https://github.com/NV-Phong/syscolor/releases/tag/v0.1.0
+
+## [0.1.1] - 2026-08-29
+
+### Changed
+- Interactive TUI: the menu right border (`│`) now uses the section accent color, selection arrow (`❯`) is highlighted with a centered accent background block only, and selected rows gain a small extra padding to keep the border aligned.
+- Controls & Shortcuts: duplicated and alternate key hints simplified to reduce clutter in the help pane.
+
+### Fixed
+- Right-border alignment for selected rows when the arrow highlight is present.
+
+[0.1.1]: https://github.com/NV-Phong/syscolor/releases/tag/v0.1.1
