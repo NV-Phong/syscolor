@@ -96,6 +96,12 @@ cargo run --manifest-path Cargo.toml
 ```
 
 
+## Screenshot
+
+Below is a screenshot of the interactive TUI menu (rendered in Windows Terminal):
+
+![Interactive TUI menu](docs/assets/menu.png)
+
 ## License
 
 [MIT](LICENSE) © 2026 NV-Phong
