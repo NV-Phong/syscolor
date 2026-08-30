@@ -211,11 +211,11 @@ fn parse_color_component(component: &str) -> Result<u8> {
 
 fn preset_colors() -> Vec<(&'static str, Color)> {
     vec![
+        ("orange", Color::new(236, 187, 110)),
         ("pink", Color::new(255, 153, 153)),
         ("green", Color::new(172, 217, 119)),
         ("blue", Color::new(114, 176, 246)),
         ("violet", Color::new(208, 153, 255)),
-        ("orange", Color::new(236, 187, 110)),
     ]
 }
 

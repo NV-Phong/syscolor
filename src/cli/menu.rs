@@ -72,28 +72,28 @@ pub struct PresetItem {
 fn get_presets() -> Vec<PresetItem> {
     vec![
         PresetItem {
+            name: "Orange",
+            color: Color::new(236, 187, 110),
+            shortcut: Some('1'),
+        },
+        PresetItem {
             name: "Pink",
             color: Color::new(255, 153, 153),
-            shortcut: Some('1'),
+            shortcut: Some('2'),
         },
         PresetItem {
             name: "Green",
             color: Color::new(172, 217, 119),
-            shortcut: Some('2'),
+            shortcut: Some('3'),
         },
         PresetItem {
             name: "Blue",
             color: Color::new(114, 176, 246),
-            shortcut: Some('3'),
+            shortcut: Some('4'),
         },
         PresetItem {
             name: "Violet",
             color: Color::new(208, 153, 255),
-            shortcut: Some('4'),
-        },
-        PresetItem {
-            name: "Orange",
-            color: Color::new(236, 187, 110),
             shortcut: Some('5'),
         },
         PresetItem {
@@ -850,11 +850,11 @@ fn parse_custom_input(input: &str) -> Result<Color> {
 
     // Try preset named colors
     let named_presets = [
+        ("orange", Color::new(236, 187, 110)),
         ("pink", Color::new(255, 153, 153)),
         ("green", Color::new(172, 217, 119)),
         ("blue", Color::new(114, 176, 246)),
         ("violet", Color::new(208, 153, 255)),
-        ("orange", Color::new(236, 187, 110)),
         ("nord", Color::new(136, 192, 208)),
         ("cyan", Color::new(136, 192, 208)),
         ("purple", Color::new(208, 153, 255)),
