@@ -7,7 +7,7 @@
 
 ## Installation
 
-Download `syscolor-0.1.1-x86_64.msi` from the [latest release](https://github.com/NV-Phong/syscolor/releases/latest) and run the installer.
+Download `syscolor-0.1.2-x86_64.msi` from the [latest release](https://github.com/NV-Phong/syscolor/releases/latest) and run the installer.
 
 The installer places `syscolor.exe` in `Program Files\syscolor\bin\` and optionally adds it to the system `PATH`.
 
