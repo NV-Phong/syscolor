@@ -3,6 +3,7 @@ mod cli;
 mod color;
 mod constants;
 mod errors;
+mod power_watch;
 mod registry;
 mod system_colors;
 mod win32;

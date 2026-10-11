@@ -24,13 +24,25 @@ impl SystemColorManager {
         })
     }
 
-    pub fn apply(&self) -> Result<()> {
+    /// Sets system colors via Win32 API and broadcasts change notification.
+    pub fn apply_raw(&self) -> Result<()> {
         let colors = registry::read_all()?;
         win32::set_sys_colors(&[
             (SystemColorSlot::Highlight, colors.highlight),
             (SystemColorSlot::HotTracking, colors.hot_tracking),
         ])?;
         broadcast::broadcast_all()?;
+        Ok(())
+    }
+
+    /// Sets system colors, broadcasts change notification, and automatically
+    /// ensures the background watcher daemon is running (detached, no terminal hang).
+    pub fn apply(&self) -> Result<()> {
+        self.apply_raw()?;
+
+        #[cfg(windows)]
+        crate::power_watch::ensure_watcher_running();
+
         Ok(())
     }
 

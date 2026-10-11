@@ -41,8 +41,27 @@ pub enum Commands {
     Restore {
         path: PathBuf,
     },
+    /// Manage automatic startup on Windows boot/logon
+    Autostart {
+        #[arg(value_enum, default_value_t = AutostartAction::Status)]
+        action: AutostartAction,
+    },
+    /// Internal background watcher daemon that reapplies accent colors after sleep/resume
+    #[command(hide = true)]
+    Watch {
+        /// Print detailed logs on each resume event
+        #[arg(short, long)]
+        verbose: bool,
+    },
     #[command(alias = "interactive", alias = "tui", alias = "select", alias = "ui")]
     Menu,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq, ValueEnum)]
+pub enum AutostartAction {
+    Enable,
+    Disable,
+    Status,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, ValueEnum)]
@@ -118,6 +137,29 @@ pub fn run(cli: Cli) -> Result<()> {
             registry::write_all_entries(&backup.into_registry_entries())?;
             manager.apply()?;
             tracing::info!(?path, "restore completed");
+        }
+        Commands::Autostart { action } => match action {
+            AutostartAction::Enable => {
+                crate::power_watch::set_autostart(true)?;
+                println!("syscolor: autostart on Windows logon enabled");
+            }
+            AutostartAction::Disable => {
+                crate::power_watch::set_autostart(false)?;
+                println!("syscolor: autostart on Windows logon disabled");
+            }
+            AutostartAction::Status => {
+                let enabled = crate::power_watch::is_autostart_enabled();
+                let status_str = if enabled { "enabled" } else { "disabled" };
+                println!("syscolor: autostart on Windows logon is {}", status_str);
+            }
+        },
+        Commands::Watch { verbose } => {
+            // Apply current registry colors first without re-spawning
+            tracing::info!("applying registry colors before starting watcher");
+            if let Err(e) = manager.apply_raw() {
+                tracing::warn!(%e, "initial apply failed (continuing to watch)");
+            }
+            crate::power_watch::run_power_watcher(verbose)?;
         }
     }
 

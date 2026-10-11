@@ -133,6 +133,9 @@ impl Drop for TerminalGuard {
 
 // ── Main Interactive Select Menu Loop ───────────────────────────────────────
 pub fn run_interactive_menu() -> Result<()> {
+    #[cfg(windows)]
+    crate::power_watch::ensure_watcher_running();
+
     let _guard = TerminalGuard::new()?;
     let manager = SystemColorManager;
 
@@ -535,6 +538,12 @@ fn render_main_screen(
         "Live HotTracking:  {} ({:3}, {:3}, {:3})  {}████\x1b[0m",
         live_hot.to_hex(), live_hot.r, live_hot.g, live_hot.b, live_hot.ansi_fg()
     );
+    let daemon_running = crate::power_watch::is_watcher_running();
+    let daemon_content: String = if daemon_running {
+        "\x1b[38;2;139;212;156mACTIVE\x1b[0m (Auto-restores colors on wake)".to_string()
+    } else {
+        "\x1b[38;2;125;166;216mSTANDBY\x1b[0m (Starts on apply)".to_string()
+    };
     let sync_content: String = if is_synced {
         "\x1b[38;2;139;212;156mSYNCHRONIZED\x1b[0m (Live Win32 matches Registry)".to_string()
     } else {
@@ -543,6 +552,7 @@ fn render_main_screen(
 
     lines.push(render_box_item(true, false, "HILIGHT", &hi_content, COLOR_STATUS, CARD_WIDTH, false));
     lines.push(render_box_item(false, false, "HOTLIGHT", &hot_content, COLOR_STATUS, CARD_WIDTH, false));
+    lines.push(render_box_item(false, false, "DAEMON", &daemon_content, COLOR_STATUS, CARD_WIDTH, false));
     lines.push(render_box_item(false, true, "STATUS", &sync_content, COLOR_STATUS, CARD_WIDTH, false));
     lines.push(render_box_footer(CARD_WIDTH));
 
