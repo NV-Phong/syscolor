@@ -4,8 +4,8 @@
 //! survive DWM / Winlogon / theme resets.
 //!
 //! Users never need to run this manually or keep a terminal open.
-//! `syscolor` automatically configures both a background daemon and a
-//! native Windows Task Scheduler wake trigger whenever colors are applied.
+//! `syscolor` configures a native Windows Task Scheduler wake trigger
+//! whenever colors are applied.
 
 use crate::system_colors::SystemColorManager;
 
@@ -113,25 +113,22 @@ pub fn is_watcher_running() -> bool {
     false
 }
 
-/// Ensures both the background power-watcher daemon and the native Task Scheduler
-/// wake trigger are active.
+/// Ensures the background power-watcher daemon and native Task Scheduler wake
+/// trigger are active.
 #[cfg(windows)]
 pub fn ensure_watcher_running() {
     use std::os::windows::process::CommandExt;
 
-    // 1. Ensure Windows Startup (HKCU\...\Run) entry exists
-    let _ = set_autostart(true);
-
-    // 2. Ensure native Task Scheduler trigger (Event ID 1 from Power-Troubleshooter)
+    // Ensure native Task Scheduler trigger (Event ID 1 from Power-Troubleshooter).
     ensure_task_scheduler_task();
 
-    // 3. Fast-path: check if daemon is already alive
+    // Fast-path: check if daemon is already alive.
     if is_watcher_running() {
         tracing::debug!("power watcher daemon is already running");
         return;
     }
 
-    // 4. Locate current executable
+    // Locate current executable.
     let exe = match std::env::current_exe() {
         Ok(p) => p,
         Err(e) => {

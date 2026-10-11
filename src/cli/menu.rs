@@ -15,7 +15,6 @@ use crossterm::{
 
 use crate::{
     color::Color,
-    constants::SystemColorSlot,
     errors::{Error, Result},
     registry,
     system_colors::{SystemColorManager, SystemColors},
@@ -29,39 +28,6 @@ const COLOR_STATUS: (u8, u8, u8) = (125, 166, 216);    // #7DA6D8 (Soft Blue)
 const COLOR_CONTROLS: (u8, u8, u8) = (215, 160, 201);  // #D7A0C9 (Lavender / Pink)
 
 const CARD_WIDTH: usize = 68;
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum TargetMode {
-    Both,
-    Highlight,
-    HotTracking,
-}
-
-impl TargetMode {
-    pub fn label(self) -> &'static str {
-        match self {
-            Self::Both => "Both (Highlight + Hot-Tracking)",
-            Self::Highlight => "Highlight Only (Hilight)",
-            Self::HotTracking => "Hot-Tracking Only (HotTrackingColor)",
-        }
-    }
-
-    pub fn short_label(self) -> &'static str {
-        match self {
-            Self::Both => "Both",
-            Self::Highlight => "Highlight",
-            Self::HotTracking => "Hot-Tracking",
-        }
-    }
-
-    pub fn next(self) -> Self {
-        match self {
-            Self::Both => Self::Highlight,
-            Self::Highlight => Self::HotTracking,
-            Self::HotTracking => Self::Both,
-        }
-    }
-}
 
 pub struct PresetItem {
     pub name: &'static str,
@@ -107,6 +73,7 @@ fn get_presets() -> Vec<PresetItem> {
 #[derive(Clone, Debug)]
 enum Toast {
     Success(String),
+    #[allow(dead_code)]
     Info(String),
     Error(String),
 }
@@ -140,7 +107,6 @@ pub fn run_interactive_menu() -> Result<()> {
     let manager = SystemColorManager;
 
     let mut selected_index: usize = 0;
-    let mut target_mode = TargetMode::Both;
     let mut toast: Option<Toast> = None;
 
     let presets = get_presets();
@@ -149,14 +115,13 @@ pub fn run_interactive_menu() -> Result<()> {
     // Total actionable items in main menu:
     // 0..total_preset_count: Presets
     // total_preset_count: Custom Color
-    // total_preset_count + 1: Toggle Target Mode
-    // total_preset_count + 2: Apply Registry Colors
-    // total_preset_count + 3: Reload & Sync Session
-    // total_preset_count + 4: Backup Registry to JSON
-    // total_preset_count + 5: Restore Registry from JSON
-    // total_preset_count + 6: Dump & Inspect Registry Values
-    // total_preset_count + 7: Exit
-    let total_items = total_preset_count + 8;
+    // total_preset_count + 1: Apply Registry Colors
+    // total_preset_count + 2: Reload & Sync Session
+    // total_preset_count + 3: Backup Registry to JSON
+    // total_preset_count + 4: Restore Registry from JSON
+    // total_preset_count + 5: Dump & Inspect Registry Values
+    // total_preset_count + 6: Exit
+    let total_items = total_preset_count + 7;
 
     let mut needs_redraw = true;
 
@@ -168,7 +133,6 @@ pub fn run_interactive_menu() -> Result<()> {
 
             render_main_screen(
                 selected_index,
-                target_mode,
                 &presets,
                 live_colors,
                 registry_colors,
@@ -206,25 +170,18 @@ pub fn run_interactive_menu() -> Result<()> {
                 KeyCode::Home => selected_index = 0,
                 KeyCode::End => selected_index = total_items - 1,
 
-                // Target Mode Toggle
-                KeyCode::Tab | KeyCode::Char('t') => {
-                    target_mode = target_mode.next();
-                    toast = Some(Toast::Info(format!("Target set to: {}", target_mode.label())));
-                }
-
                 // Direct Preset Shortcuts (1-6)
                 KeyCode::Char(c) if c.is_ascii_digit() && c != '0' => {
                     let idx = (c as usize) - ('1' as usize);
                     if idx < presets.len() {
                         let preset = &presets[idx];
-                        match apply_color_to_target(&manager, target_mode, preset.color) {
+                        match manager.set_all(preset.color) {
                             Ok(()) => {
                                 toast = Some(Toast::Success(format!(
-                                    "Applied preset '{}' {} ({}) to {}",
+                                    "Applied preset '{}' {} ({})",
                                     preset.name,
                                     preset.color.to_hex(),
-                                    preset.color,
-                                    target_mode.short_label()
+                                    preset.color
                                 )));
                             }
                             Err(e) => toast = Some(Toast::Error(format!("Apply error: {e}"))),
@@ -252,13 +209,12 @@ pub fn run_interactive_menu() -> Result<()> {
                 KeyCode::Char('c') | KeyCode::Char('C') => {
                     // Open Custom Color Input modal
                     if let Some(custom_color) = prompt_custom_color()? {
-                        match apply_color_to_target(&manager, target_mode, custom_color) {
+                        match manager.set_all(custom_color) {
                             Ok(()) => {
                                 toast = Some(Toast::Success(format!(
-                                    "Applied custom color {} ({}) to {}",
+                                    "Applied custom color {} ({})",
                                     custom_color.to_hex(),
-                                    custom_color,
-                                    target_mode.short_label()
+                                    custom_color
                                 )));
                             }
                             Err(e) => toast = Some(Toast::Error(format!("Failed to set custom color: {e}"))),
@@ -295,14 +251,13 @@ pub fn run_interactive_menu() -> Result<()> {
                     if selected_index < total_preset_count {
                         // Preset selected
                         let preset = &presets[selected_index];
-                        match apply_color_to_target(&manager, target_mode, preset.color) {
+                        match manager.set_all(preset.color) {
                             Ok(()) => {
                                 toast = Some(Toast::Success(format!(
-                                    "Applied preset '{}' {} ({}) to {}",
+                                    "Applied preset '{}' {} ({})",
                                     preset.name,
                                     preset.color.to_hex(),
-                                    preset.color,
-                                    target_mode.short_label()
+                                    preset.color
                                 )));
                             }
                             Err(e) => toast = Some(Toast::Error(format!("Apply error: {e}"))),
@@ -313,13 +268,12 @@ pub fn run_interactive_menu() -> Result<()> {
                             0 => {
                                 // Custom Color
                                 if let Some(custom_color) = prompt_custom_color()? {
-                                    match apply_color_to_target(&manager, target_mode, custom_color) {
+                                    match manager.set_all(custom_color) {
                                         Ok(()) => {
                                             toast = Some(Toast::Success(format!(
-                                                "Applied custom color {} ({}) to {}",
+                                                "Applied custom color {} ({})",
                                                 custom_color.to_hex(),
-                                                custom_color,
-                                                target_mode.short_label()
+                                                custom_color
                                             )));
                                         }
                                         Err(e) => toast = Some(Toast::Error(format!("Failed to set custom color: {e}"))),
@@ -327,11 +281,6 @@ pub fn run_interactive_menu() -> Result<()> {
                                 }
                             }
                             1 => {
-                                // Toggle Target Mode
-                                target_mode = target_mode.next();
-                                toast = Some(Toast::Info(format!("Target set to: {}", target_mode.label())));
-                            }
-                            2 => {
                                 // Apply Registry Colors
                                 match manager.apply() {
                                     Ok(()) => {
@@ -340,7 +289,7 @@ pub fn run_interactive_menu() -> Result<()> {
                                     Err(e) => toast = Some(Toast::Error(format!("Failed to apply: {e}"))),
                                 }
                             }
-                            3 => {
+                            2 => {
                                 // Reload Session
                                 match manager.reload() {
                                     Ok(()) => {
@@ -349,7 +298,7 @@ pub fn run_interactive_menu() -> Result<()> {
                                     Err(e) => toast = Some(Toast::Error(format!("Failed to reload: {e}"))),
                                 }
                             }
-                            4 => {
+                            3 => {
                                 // Backup to JSON
                                 if let Some(backup_path) = prompt_backup_filename()? {
                                     match backup_registry_to_file(&backup_path) {
@@ -363,17 +312,17 @@ pub fn run_interactive_menu() -> Result<()> {
                                     }
                                 }
                             }
-                            5 => {
+                            4 => {
                                 // Restore from JSON
                                 if let Some(path) = prompt_restore_file(&manager)? {
                                     toast = Some(Toast::Success(format!("Restored from '{}'", path.display())));
                                 }
                             }
-                            6 => {
+                            5 => {
                                 // Dump & Inspect Registry Values
                                 show_registry_dump_screen()?;
                             }
-                            7 => {
+                            6 => {
                                 // Exit
                                 break;
                             }
@@ -392,23 +341,10 @@ pub fn run_interactive_menu() -> Result<()> {
     Ok(())
 }
 
-fn apply_color_to_target(
-    manager: &SystemColorManager,
-    target: TargetMode,
-    color: Color,
-) -> Result<()> {
-    match target {
-        TargetMode::Both => manager.set_all(color),
-        TargetMode::Highlight => manager.set(SystemColorSlot::Highlight, color),
-        TargetMode::HotTracking => manager.set(SystemColorSlot::HotTracking, color),
-    }
-}
-
 // ── Flicker-Free Rendering Functions ────────────────────────────────────────
 
 fn render_main_screen(
     selected_index: usize,
-    target_mode: TargetMode,
     presets: &[PresetItem],
     live_colors: Option<SystemColors>,
     registry_colors: Option<SystemColors>,
@@ -458,46 +394,41 @@ fn render_main_screen(
     // ── SECTION 2: ACTIONS & CONFIGURATION ───────────────────────────────────
     lines.push(render_box_header("ACTIONS & CONFIGURATION", COLOR_ACTIONS, CARD_WIDTH));
 
-    let action_items = [
+    let action_items: [(&'static str, &'static str, usize); 7] = [
         (
             "CUSTOM",
-            "[C] Custom Color... (HEX / RGB component input)".into(),
+            "[C] Custom Color... (HEX / RGB component input)",
             presets.len() + 0,
         ),
         (
-            "TARGET",
-            format!("[T] Target Slot: [ {} ]", target_mode.label()),
+            "APPLY",
+            "[A] Apply Registry Colors (Win32 SetSysColors + Broadcast)",
             presets.len() + 1,
         ),
         (
-            "APPLY",
-            "[A] Apply Registry Colors (Win32 SetSysColors + Broadcast)".into(),
+            "RELOAD",
+            "[R] Reload & Synchronize Live Session",
             presets.len() + 2,
         ),
         (
-            "RELOAD",
-            "[R] Reload & Synchronize Live Session".into(),
+            "BACKUP",
+            "[B] Backup Registry Colors to JSON File",
             presets.len() + 3,
         ),
         (
-            "BACKUP",
-            "[B] Backup Registry Colors to JSON File".into(),
+            "RESTORE",
+            "[S] Restore Registry Colors from JSON File",
             presets.len() + 4,
         ),
         (
-            "RESTORE",
-            "[S] Restore Registry Colors from JSON File".into(),
+            "DUMP",
+            "[D] Dump & Inspect All Registry Color Entries",
             presets.len() + 5,
         ),
         (
-            "DUMP",
-            "[D] Dump & Inspect All Registry Color Entries".into(),
-            presets.len() + 6,
-        ),
-        (
             "EXIT",
-            "[Q] Exit syscolor".into(),
-            presets.len() + 7,
+            "[Q] Exit syscolor",
+            presets.len() + 6,
         ),
     ];
 
@@ -1169,14 +1100,6 @@ fn restore_registry_from_file(path: &Path) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn target_mode_cycles_properly() {
-        let mode = TargetMode::Both;
-        assert_eq!(mode.next(), TargetMode::Highlight);
-        assert_eq!(mode.next().next(), TargetMode::HotTracking);
-        assert_eq!(mode.next().next().next(), TargetMode::Both);
-    }
 
     #[test]
     fn parses_custom_input_hex_and_rgb() {
